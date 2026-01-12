@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>McGill Big 3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        :root {
+            --bg: #0a0a0c;
+            --blue: #2563eb;
+            --green: #10b981;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: #ffffff;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        .slider-custom {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            background: #1e1e24;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .slider-custom::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .progress-ring {
+            transition: stroke-dashoffset 0.1s linear; 
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        #resetFill { transition: width 1.5s linear; width: 0%; }
+        .is-holding #resetFill { width: 100%; }
+
+        .pulse-text { animation: pulser 1s infinite; }
+        @keyframes pulser {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(0.98); }
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div id="mainContainer" class="w-full max-w-md bg-[#121217] rounded-[2rem] border border-white/10 flex flex-col h-[90vh] shadow-2xl relative overflow-hidden">
+        
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="flex flex-col h-full overflow-hidden">
+            <header class="text-center pt-6 pb-2 shrink-0">
+                <h1 class="text-3xl font-900 tracking-tighter text-white">McGill <span class="text-blue-500">Big 3</span></h1>
+                <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-1">Core Stability Protocol</p>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <div class="flex border-b border-white/5 mx-6 mb-4">
+                <button onclick="switchTab('timer')" id="tab-timer" class="flex-1 py-3 text-xs font-black tracking-widest border-b-2 border-blue-500 text-white">WORKOUT</button>
+                <button onclick="switchTab('tutorials')" id="tab-tutorials" class="flex-1 py-3 text-xs font-black tracking-widest border-b-2 border-transparent text-slate-500">TUTORIALS</button>
+            </div>
+
+            <!-- Tab: Timer Settings -->
+            <div id="view-timer" class="flex-1 flex flex-col p-6 pt-0 space-y-6 overflow-y-auto hide-scrollbar">
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setEx('crunch')" id="btn-crunch" class="ex-tab py-3 rounded-xl text-[10px] font-black border border-blue-600 bg-blue-600/10 text-white transition-all">CURL-UP</button>
+                    <button onclick="setEx('bridge')" id="btn-bridge" class="ex-tab py-3 rounded-xl text-[10px] font-black border border-white/5 bg-white/5 text-slate-500 transition-all">BRIDGE</button>
+                    <button onclick="setEx('birdog')" id="btn-birdog" class="ex-tab py-3 rounded-xl text-[10px] font-black border border-white/5 bg-white/5 text-slate-500 transition-all">BIRD DOG</button>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Hold Duration</span>
+                            <span id="holdVal" class="text-xl font-900">10s</span>
+                        </div>
+                        <input type="range" id="holdSlider" min="5" max="30" value="10" class="slider-custom accent-blue-600" oninput="updateSettings()">
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Rest Duration</span>
+                            <span id="restVal" class="text-xl font-900">3s</span>
+                        </div>
+                        <input type="range" id="restSlider" min="2" max="20" value="3" class="slider-custom accent-green-500" oninput="updateSettings()">
+                    </div>
+
+                    <div class="pt-2">
+                        <span class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 text-center">Pyramid Strategy</span>
+                        <div class="flex gap-2">
+                            <button onclick="setSeq('6,4,2')" class="seq-btn flex-1 py-3 rounded-xl bg-blue-600 text-white font-black text-xs">6-4-2</button>
+                            <button onclick="setSeq('5,3,1')" class="seq-btn flex-1 py-3 rounded-xl bg-white/5 text-slate-500 font-bold text-xs">5-3-1</button>
+                            <button onclick="setSeq('3,2,1')" class="seq-btn flex-1 py-3 rounded-xl bg-white/5 text-slate-500 font-bold text-xs">3-2-1</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="startBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl tracking-widest shadow-lg active:scale-95 transition-all">
+                    START
+                </button>
+            </div>
+
+            <!-- Tab: Tutorials -->
+            <div id="view-tutorials" class="hidden flex-1 flex flex-col p-6 pt-0 space-y-4 overflow-y-auto hide-scrollbar">
+                <div class="space-y-4">
+                    <a href="https://www.youtube.com/watch?v=C89EKtI8a3o" target="_blank" class="block bg-white/5 border border-white/10 rounded-2xl p-4 active:bg-white/10 transition-colors">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-16 h-16 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0">
+                                <svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black leading-tight">McGill Big 3: Proper Form Guide</h3>
+                                <p class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Squat University</p>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://www.youtube.com/watch?v=FmZwkgg7pqU" target="_blank" class="block bg-white/5 border border-white/10 rounded-2xl p-4 active:bg-white/10 transition-colors">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-16 h-16 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0">
+                                <svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black leading-tight">Reduce Back Pain with Big 3</h3>
+                                <p class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Zack Henderson</p>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://www.youtube.com/watch?v=2_e4I-brfqs" target="_blank" class="block bg-white/5 border border-white/10 rounded-2xl p-4 active:bg-white/10 transition-colors">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-16 h-16 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0">
+                                <svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black leading-tight">The 3 Best Core Exercises</h3>
+                                <p class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Dr. Stuart McGill Intro</p>
+                            </div>
+                        </div>
+                    </a>
+                    <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest text-center">Tip: Focus on bracing the core, not sucking it in.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timer Screen -->
+        <div id="timerScreen" class="hidden h-full flex flex-col p-6">
+            <div id="sideIndicator" class="text-center py-2 h-8"></div>
+            
+            <div class="flex-1 flex flex-col justify-center items-center">
+                <div class="relative w-72 h-72">
+                    <svg class="w-full h-full">
+                        <circle cx="144" cy="144" r="130" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" />
+                        <circle id="progressCircle" cx="144" cy="144" r="130" stroke="#2563eb" stroke-width="12" fill="transparent" 
+                                stroke-dasharray="817" stroke-dashoffset="0" class="progress-ring" stroke-linecap="round" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="phaseLabel" class="text-xs font-black uppercase tracking-[0.5em] text-blue-500 mb-2">Hold</span>
+                        <span id="timerValue" class="text-9xl font-900 text-white tabular-nums tracking-tighter">10</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pyramidUI" class="flex justify-center items-end gap-3 h-14 mb-8"></div>
+
+            <div class="grid grid-cols-5 gap-3 pb-2">
+                <button id="pauseBtn" class="col-span-3 bg-white/5 text-white py-5 rounded-2xl font-black text-xs tracking-widest border border-white/10 active:bg-white/10">PAUSE</button>
+                <button id="resetBtn" class="col-span-2 bg-red-500/10 text-red-500 py-5 rounded-2xl text-[10px] font-black tracking-widest relative overflow-hidden border border-red-500/20 active:bg-red-500/20">
+                    <div id="resetFill" class="absolute left-0 bottom-0 h-full bg-red-500/20"></div>
+                    <span class="relative z-10">RESET</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = { ex: 'crunch', hold: 10, rest: 3, seq: [6, 4, 2] };
+        let state = { running: false, paused: false, speaking: false, phase: 'prep', step: 0, rep: 1, side: 'Left', timeLeft: 0, total: 0 };
+        let ticker = null;
+        let femaleVoice = null;
+
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            femaleVoice = voices.find(v => 
+                v.name.toLowerCase().includes('female') || 
+                v.name.toLowerCase().includes('google uk english female') ||
+                v.name.toLowerCase().includes('samantha') ||
+                v.name.toLowerCase().includes('victoria') ||
+                v.name.toLowerCase().includes('moira')
+            ) || voices[0];
+        }
+
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
+
+        function switchTab(tab) {
+            const isTimer = tab === 'timer';
+            document.getElementById('view-timer').classList.toggle('hidden', !isTimer);
+            document.getElementById('view-tutorials').classList.toggle('hidden', isTimer);
+            document.getElementById('tab-timer').className = `flex-1 py-3 text-xs font-black tracking-widest border-b-2 ${isTimer ? 'border-blue-500 text-white' : 'border-transparent text-slate-500'}`;
+            document.getElementById('tab-tutorials').className = `flex-1 py-3 text-xs font-black tracking-widest border-b-2 ${!isTimer ? 'border-blue-500 text-white' : 'border-transparent text-slate-500'}`;
+        }
+
+        function updateSettings() {
+            config.hold = parseInt(document.getElementById('holdSlider').value);
+            config.rest = parseInt(document.getElementById('restSlider').value);
+            document.getElementById('holdVal').innerText = config.hold + 's';
+            document.getElementById('restVal').innerText = config.rest + 's';
+        }
+
+        const Speaker = {
+            say(text, isStatus = false) {
+                const u = new SpeechSynthesisUtterance(text);
+                if (femaleVoice) u.voice = femaleVoice;
+                u.rate = 1.6;
+                u.pitch = 1.1;
+                
+                if (isStatus) {
+                    // Set lock for progress announcements
+                    state.speaking = true;
+                    u.onend = () => {
+                        state.speaking = false;
+                    };
+                    u.onerror = () => {
+                        state.speaking = false;
+                    };
+                    // Cancel current countdown speech to prioritize status
+                    window.speechSynthesis.cancel();
+                }
+                
+                window.speechSynthesis.speak(u);
+            }
+        };
+
+        function startPhase(p) {
+            state.phase = p;
+            if (p === 'prep') {
+                state.timeLeft = 5;
+                const sideAnnounce = config.ex !== 'crunch' ? `${state.side} side. ` : '';
+                Speaker.say(`${sideAnnounce}Set of ${config.seq[state.step]}`, true);
+            } else if (p === 'work') {
+                state.timeLeft = config.hold;
+                Speaker.say("Hold", false);
+            } else {
+                state.timeLeft = config.rest;
+                Speaker.say(`Rest. Rep ${state.rep} of ${config.seq[state.step]}`, true);
+            }
+            state.total = state.timeLeft;
+            renderUI();
+        }
+
+        function tick() {
+            if (state.paused) return;
+            
+            // CRITICAL: If the female voice is currently announcing status, 
+            // we exit the tick function entirely so timeLeft does not decrease.
+            if (state.speaking) return;
+
+            if (state.timeLeft > 0) {
+                // Regular numerical countdowns
+                if (state.phase === 'work' || state.phase === 'rest' || (state.phase === 'prep' && state.timeLeft <= 3)) {
+                    Speaker.say(state.timeLeft.toString(), false);
+                }
+                state.timeLeft--;
+                renderUI();
+            } else {
+                handleTransition();
+            }
+        }
+
+        function handleTransition() {
+            const seq = config.seq;
+            if (state.phase === 'prep') {
+                startPhase('work');
+            } else if (state.phase === 'work') {
+                if (state.rep < seq[state.step]) {
+                    startPhase('rest');
+                } else {
+                    if (state.step < seq.length - 1) {
+                        state.step++;
+                        state.rep = 1;
+                        startPhase('prep');
+                    } else {
+                        if (config.ex !== 'crunch' && state.side === 'Left') {
+                            state.side = 'Right';
+                            state.step = 0;
+                            state.rep = 1;
+                            Speaker.say("Switch sides", true);
+                            startPhase('prep');
+                        } else {
+                            finish();
+                        }
+                    }
+                }
+            } else if (state.phase === 'rest') {
+                state.rep++;
+                startPhase('work');
+            }
+        }
+
+        function finish() {
+            state.running = false; 
+            clearInterval(ticker);
+            Speaker.say("Workout complete", true);
+            document.getElementById('timerValue').innerText = "✓";
+            setTimeout(resetApp, 4000);
+        }
+
+        function renderUI() {
+            document.getElementById('timerValue').innerText = state.timeLeft;
+            const phaseMap = { 'prep': 'Ready', 'work': 'Hold', 'rest': 'Rest' };
+            const label = document.getElementById('phaseLabel');
+            label.innerText = phaseMap[state.phase];
+            
+            const circle = document.getElementById('progressCircle');
+            const perc = state.total > 0 ? (state.timeLeft / state.total) : 0;
+            circle.style.strokeDashoffset = 817 - (perc * 817);
+            
+            if (state.phase === 'work') {
+                circle.style.stroke = '#2563eb';
+                label.className = "text-xs font-black uppercase tracking-[0.5em] text-blue-500 mb-2";
+                document.getElementById('timerValue').classList.add('pulse-text');
+            } else if (state.phase === 'rest') {
+                circle.style.stroke = '#10b981';
+                label.className = "text-xs font-black uppercase tracking-[0.5em] text-green-500 mb-2";
+                document.getElementById('timerValue').classList.remove('pulse-text');
+            } else {
+                circle.style.stroke = '#f59e0b';
+                label.className = "text-xs font-black uppercase tracking-[0.5em] text-orange-500 mb-2";
+                document.getElementById('timerValue').classList.remove('pulse-text');
+            }
+
+            const sideEl = document.getElementById('sideIndicator');
+            sideEl.innerHTML = config.ex !== 'crunch' ? `<span class="text-blue-500 text-[10px] font-black tracking-widest uppercase bg-blue-500/10 px-4 py-1.5 rounded-full border border-blue-500/20">${state.side} Side</span>` : '';
+            
+            renderPyramid();
+        }
+
+        function renderPyramid() {
+            const container = document.getElementById('pyramidUI');
+            container.innerHTML = config.seq.map((count, sIdx) => `
+                <div class="flex flex-col-reverse gap-1.5">
+                    ${Array.from({length: count}).map((_, rIdx) => {
+                        let cls = 'bg-white/10';
+                        if (sIdx < state.step || (sIdx === state.step && rIdx < state.rep - 1)) cls = 'bg-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.4)]';
+                        else if (sIdx === state.step && rIdx === state.rep - 1) cls = 'bg-white scale-125 shadow-white';
+                        return `<div class="w-2.5 h-2.5 rounded-full transition-all duration-300 ${cls}"></div>`;
+                    }).join('')}
+                </div>
+            `).join('');
+        }
+
+        function setEx(id) {
+            config.ex = id;
+            document.querySelectorAll('.ex-tab').forEach(el => {
+                el.className = 'ex-tab py-3 rounded-xl text-[10px] font-black border border-white/5 bg-white/5 text-slate-500 transition-all';
+            });
+            document.getElementById(`btn-${id}`).className = 'ex-tab py-3 rounded-xl text-[10px] font-black border border-blue-600 bg-blue-600/10 text-white transition-all';
+        }
+
+        function setSeq(str) {
+            config.seq = str.split(',').map(Number);
+            document.querySelectorAll('.seq-btn').forEach(el => {
+                el.className = 'seq-btn flex-1 py-3 rounded-xl bg-white/5 text-slate-500 font-bold text-xs';
+                if (el.innerText.replace(/-/g, ',') === str) el.className = 'seq-btn flex-1 py-3 rounded-xl bg-blue-600 text-white font-black text-xs shadow-lg';
+            });
+        }
+
+        function resetApp() {
+            clearInterval(ticker);
+            state = { running: false, paused: false, speaking: false, phase: 'prep', step: 0, rep: 1, side: 'Left', timeLeft: 0, total: 0 };
+            document.getElementById('setupScreen').classList.remove('hidden');
+            document.getElementById('timerScreen').classList.add('hidden');
+            window.speechSynthesis.cancel();
+            switchTab('timer');
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('timerScreen').classList.remove('hidden');
+            startPhase('prep'); 
+            ticker = setInterval(tick, 1000);
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            state.paused = !state.paused;
+            document.getElementById('pauseBtn').innerText = state.paused ? 'RESUME' : 'PAUSE';
+        });
+
+        let resetT;
+        const rb = document.getElementById('resetBtn');
+        const hs = (e) => { e.preventDefault(); rb.classList.add('is-holding'); resetT = setTimeout(resetApp, 1500); };
+        const he = () => { clearTimeout(resetT); rb.classList.remove('is-holding'); };
+        rb.addEventListener('mousedown', hs); rb.addEventListener('mouseup', he);
+        rb.addEventListener('touchstart', hs); rb.addEventListener('touchend', he);
+
+    </script>
+</body>
+</html>
